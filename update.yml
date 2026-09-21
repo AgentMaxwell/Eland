@@ -1,0 +1,53 @@
+# Save this file in your repo as: .github/workflows/update.yml
+#
+# Every ~5 minutes it copies the Queue-Times feed for Energylandia (park 317)
+# into data.json, then republishes the site to GitHub Pages. Nothing is
+# committed, so your git history stays clean.
+#
+# GitHub's scheduler can't run more often than every 5 minutes and often runs
+# late. The schedule below covers 06:00-20:59 UTC (08:00-22:59 in Poland in
+# summer, 07:00-21:59 in winter); widen it if the park is open later.
+
+name: Update queue times
+
+on:
+  schedule:
+    - cron: "*/5 6-20 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch queue times
+        run: |
+          mkdir site
+          curl -fsS --retry 3 --max-time 20 \
+            -A "energylandia-coaster-queues (personal use)" \
+            https://queue-times.com/parks/317/queue_times.json -o feed.json
+          jq -e '.lands or .rides' feed.json > /dev/null
+          jq --arg t "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{fetchedAt: $t, feed: .}' feed.json > site/data.json
+          cp index.html site/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
