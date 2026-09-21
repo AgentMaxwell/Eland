@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#1D4ED8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Energylandia coaster queues</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎢</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #EEF3FA;
+  --surface: #FFFFFF;
+  --ink: #0F2038;
+  --muted: #4E5D78;
+  --line: #D6DFEC;
+  --accent: #1D4ED8;
+  --accent-ink: #FFFFFF;
+  --warn: #A14A00;
+  --t1: #12805C; --t1-ink: #FFFFFF;
+  --t2: #F2B705; --t2-ink: #1F1600;
+  --t3: #C2560A; --t3-ink: #FFFFFF;
+  --t4: #B3123F; --t4-ink: #FFFFFF;
+  --closed: #DCE2EC; --closed-ink: #44536E;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0B1524;
+    --surface: #13223A;
+    --ink: #EAF1FF;
+    --muted: #9FB0CC;
+    --line: #26395C;
+    --accent: #8FB0FF;
+    --accent-ink: #0B1524;
+    --warn: #FFB35C;
+    --closed: #26364F; --closed-ink: #B4C2DA;
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) calc(110px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+h1 {
+  margin: 0 0 12px;
+  font-size: clamp(2.2rem, 10vw, 3.1rem);
+  line-height: 1;
+  font-weight: 700;
+}
+.headline { margin: 0; font-size: 1.7rem; font-weight: 600; line-height: 1.15; }
+.status { margin: 6px 0 0; color: var(--muted); font-size: 1.1rem; font-weight: 500; }
+.banner {
+  margin: 14px 0 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--t3);
+  color: var(--t3-ink);
+  font-weight: 600;
+}
+.controls {
+  margin: 18px 0 14px;
+}
+.seg { display: inline-flex; border: 2px solid var(--accent); border-radius: 999px; overflow: hidden; }
+.seg button {
+  font: inherit; font-weight: 600; font-size: 1.1rem;
+  min-height: 44px; padding: 0 16px;
+  background: transparent; color: var(--accent);
+  border: 0; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.bar {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  padding: 10px max(16px, env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+}
+.bar-inner { max-width: 640px; margin: 0 auto; }
+.primary {
+  display: block; width: 100%;
+  font: inherit; font-weight: 700; font-size: 1.45rem;
+  min-height: 56px;
+  background: var(--accent); color: var(--accent-ink);
+  border: 0; border-radius: 14px; cursor: pointer;
+}
+.primary:disabled { opacity: 0.6; cursor: default; }
+button:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.seg button:focus-visible { outline-offset: -4px; }
+
+.list {
+  list-style: none; margin: 0; padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+}
+.ride {
+  display: grid;
+  grid-template-columns: 4.75rem 1fr;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 14px;
+}
+.ride + .ride { border-top: 1px solid var(--line); }
+.empty { padding: 22px 16px; color: var(--muted); }
+.chip {
+  min-height: 4.25rem;
+  border-radius: 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
+}
+.chip .num { font-size: 2.5rem; font-weight: 700; line-height: 1; }
+.chip .unit { font-size: 1rem; font-weight: 600; line-height: 1.1; }
+.chip .word { font-size: 1.1rem; font-weight: 700; line-height: 1.1; padding: 0 4px; }
+.t1 { background: var(--t1); color: var(--t1-ink); }
+.t2 { background: var(--t2); color: var(--t2-ink); }
+.t3 { background: var(--t3); color: var(--t3-ink); }
+.t4 { background: var(--t4); color: var(--t4-ink); }
+.closed { background: var(--closed); color: var(--closed-ink); }
+.nodata { background: transparent; color: var(--muted); border: 2px dashed var(--line); }
+.info h2 { margin: 0; font-size: 1.6rem; font-weight: 600; line-height: 1.1; }
+.info p { margin: 2px 0 0; color: var(--muted); font-size: 1.05rem; font-weight: 500; }
+.info p.old { color: var(--warn); font-weight: 700; }
+footer { margin-top: 20px; color: var(--muted); font-size: 1.05rem; }
+footer p { margin: 0 0 6px; }
+footer a { color: var(--accent); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Energylandia coaster queues</h1>
+    <p id="headline" class="headline" aria-live="polite">Loading queue times…</p>
+    <p id="status" class="status"></p>
+  </header>
+  <div id="banner" class="banner" role="status" hidden></div>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Sort order">
+      <button type="button" data-sort="shortest" aria-pressed="true">Shortest first</button>
+      <button type="button" data-sort="longest" aria-pressed="false">Longest first</button>
+    </div>
+  </div>
+  <ul id="list" class="list" aria-busy="true"><li class="empty">Loading…</li></ul>
+  <footer>
+    <p><a href="https://queue-times.com/">Powered by Queue-Times.com</a></p>
+    <p>Wait times are estimates. Queue-Times updates about every 5 minutes and GitHub copies its data about as often, so Update loads the latest copy, which may not have changed yet.</p>
+  </footer>
+</main>
+<div class="bar"><div class="bar-inner"><button type="button" id="refresh" class="primary">Update queue times</button></div></div>
+<script>
+(function () {
+  var CFG = {
+    oldMs: 20 * 60000,          // highlight a ride whose data is older than this
+    dataOldMs: 15 * 60000       // warn when data.json itself is older than this
+  };
+
+  // The 19 coasters. `id` is the Queue-Times ride id; if it changes, matching
+  // falls back to the name. Circus Coaster and Happy Loops weren't in the
+  // Queue-Times feed when this was written, so they show "No data".
+  var COASTERS = [
+    { id: 11270, name: "Hyperion", zone: "Extreme Zone" },
+    { id: 11276, name: "Zadra", zone: "Dragon Zone" },
+    { id: 11281, name: "Abyssus", zone: "Aqualantis" },
+    { id: 11256, name: "Mayan", zone: "Extreme Zone" },
+    { id: 11266, name: "Speed", zone: "Extreme Zone" },
+    { id: 11262, name: "Formuła", zone: "Extreme Zone" },
+    { id: 11259, name: "Viking", zone: "Extreme Zone" },
+    { id: 11261, name: "Dragon", zone: "Family Zone" },
+    { id: 11268, name: "Boomerang", zone: "Family Zone" },
+    { id: 11246, name: "Mars", zone: "Family Zone" },
+    { id: 11242, name: "Frutti Loop", zone: "Family Zone" },
+    { id: 11274, name: "Draken", zone: "Dragon Zone" },
+    { id: 11275, name: "Frida", zone: "Dragon Zone" },
+    { id: 11280, name: "Light Explorers", zone: "Aqualantis" },
+    { id: 11451, name: "Choco Chip Creek", zone: "Sweet Valley" },
+    { id: 11979, name: "Honey Harbour", zone: "Sweet Valley", aliases: ["Honey Harbor"] },
+    { id: 11243, name: "Energuś", zone: "Little Kids Zone" },
+    { id: null, name: "Circus Coaster", zone: "Little Kids Zone" },
+    { id: null, name: "Happy Loops", zone: "Little Kids Zone" }
+    // The park also lists Tidal Wave Twister as a coaster. Add a comma above and
+    // uncomment to make it 20:
+    // { id: 11278, name: "Tidal Wave Twister", zone: "Aqualantis" }
+  ];
+
+  function norm(s) {
+    return String(s).toLowerCase().replace(/ł/g, "l").normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+  }
+
+  function buildBoard(feed) {
+    var rides = [];
+    (feed.lands || []).forEach(function (l) { rides = rides.concat(l.rides || []); });
+    rides = rides.concat(feed.rides || []);
+    var byId = {}, byName = {};
+    rides.forEach(function (r) { byId[r.id] = r; byName[norm(r.name)] = r; });
+
+    return COASTERS.map(function (c) {
+      var ride = c.id != null ? byId[c.id] : undefined;
+      if (!ride) {
+        var names = [c.name].concat(c.aliases || []);
+        for (var i = 0; i < names.length && !ride; i++) ride = byName[norm(names[i])];
+      }
+      if (!ride) return { name: c.name, zone: c.zone, status: "nodata" };
+      return {
+        name: c.name,
+        zone: c.zone,
+        status: ride.is_open ? "open" : "closed",
+        wait: Number(ride.wait_time) || 0,
+        updated: ride.last_updated || null
+      };
+    });
+  }
+
+  var state = {
+    coasters: null,
+    checkedAt: null,   // when this page last read data.json
+    fetchedAt: null,   // when GitHub last copied the feed into data.json
+    sort: "shortest",
+    loading: false,
+    error: null,
+    note: ""           // short message after pressing Update
+  };
+  try { if (localStorage.getItem("sort") === "longest") state.sort = "longest"; } catch (e) {}
+
+  var el = {
+    headline: document.getElementById("headline"),
+    status: document.getElementById("status"),
+    banner: document.getElementById("banner"),
+    list: document.getElementById("list"),
+    refresh: document.getElementById("refresh")
+  };
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function clock(ms) {
+    return new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  }
+  function age(ms) {
+    var m = Math.floor(ms / 60000);
+    if (m < 1) return "just now";
+    if (m < 60) return m + " min ago";
+    return Math.floor(m / 60) + " h " + (m % 60) + " min ago";
+  }
+  function tier(w) { return w <= 15 ? "t1" : w <= 30 ? "t2" : w <= 50 ? "t3" : "t4"; }
+
+  function sorted() {
+    var order = { open: 0, closed: 1, nodata: 2 };
+    var dir = state.sort === "longest" ? -1 : 1;
+    return state.coasters.slice().sort(function (a, b) {
+      if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
+      if (a.status === "open" && a.wait !== b.wait) return (a.wait - b.wait) * dir;
+      return a.name.localeCompare(b.name);
+    });
+  }
+
+  function rowHtml(c) {
+    var cls, chip, label, note = "";
+    if (c.status === "open") {
+      cls = tier(c.wait);
+      chip = '<span class="num">' + c.wait + '</span><span class="unit">min</span>';
+      label = c.wait + " minute wait";
+    } else if (c.status === "closed") {
+      cls = "closed"; chip = '<span class="word">Closed</span>'; label = "Closed";
+    } else {
+      cls = "nodata"; chip = '<span class="word">No data</span>'; label = "No data";
+    }
+    if (c.status === "nodata") {
+      note = "<p>Not in the Queue-Times feed</p>";
+    } else if (c.updated) {
+      note = '<p class="age" data-open="' + (c.status === "open" ? "1" : "0") + '" data-updated="' + esc(c.updated) + '"></p>';
+    }
+    return '<li class="ride"><div class="chip ' + cls + '" role="img" aria-label="' + label + '">' + chip +
+      '</div><div class="info"><h2>' + esc(c.name) + "</h2><p>" + esc(c.zone) + "</p>" + note + "</div></li>";
+  }
+
+  function updateAges() {
+    var nodes = el.list.querySelectorAll(".age");
+    for (var i = 0; i < nodes.length; i++) {
+      var t = Date.parse(nodes[i].getAttribute("data-updated"));
+      if (isNaN(t)) { nodes[i].textContent = ""; continue; }
+      var ms = Math.max(0, Date.now() - t);
+      nodes[i].textContent = "Updated " + age(ms);
+      nodes[i].className = "age" + (nodes[i].getAttribute("data-open") === "1" && ms > CFG.oldMs ? " old" : "");
+    }
+  }
+
+  function renderRows() {
+    if (!state.coasters) return;
+    el.list.innerHTML = sorted().map(rowHtml).join("");
+    el.list.setAttribute("aria-busy", "false");
+    updateAges();
+    var open = state.coasters.filter(function (c) { return c.status === "open"; });
+    if (!open.length) {
+      el.headline.textContent = "No coasters open right now";
+    } else {
+      var best = open.slice().sort(function (a, b) { return a.wait - b.wait || a.name.localeCompare(b.name); })[0];
+      el.headline.textContent = "Shortest queue: " + best.name + ", " + best.wait + " min";
+    }
+    renderStatus();
+  }
+
+  function renderBanner() {
+    var msg = "";
+    if (state.error) {
+      msg = state.coasters
+        ? "Couldn't reload the data. Showing the last copy from " + clock(state.checkedAt) + "."
+        : "Couldn't load queue times. " + state.error;
+    } else if (state.fetchedAt && Date.now() - state.fetchedAt > CFG.dataOldMs) {
+      msg = "Queue data was last copied " + age(Date.now() - state.fetchedAt) + ". Scheduled updates on GitHub can run late.";
+    }
+    el.banner.hidden = !msg;
+    if (el.banner.textContent !== msg) el.banner.textContent = msg;
+  }
+
+  function renderStatus() {
+    var parts = [];
+    if (state.coasters) {
+      var open = state.coasters.filter(function (c) { return c.status === "open"; }).length;
+      var known = state.coasters.filter(function (c) { return c.status !== "nodata"; }).length;
+      parts.push(open + " of " + known + " coasters open.");
+    }
+    if (state.fetchedAt) parts.push("Data from " + clock(state.fetchedAt) + ", " + age(Date.now() - state.fetchedAt) + ".");
+    if (state.note) parts.push(state.note);
+    el.status.textContent = parts.join(" ");
+    el.refresh.disabled = state.loading;
+    el.refresh.textContent = state.loading ? "Updating…" : "Update queue times";
+    renderBanner();
+  }
+
+  var noteTimer = null;
+  function setNote(text) {
+    state.note = text;
+    clearTimeout(noteTimer);
+    if (text) noteTimer = setTimeout(function () { state.note = ""; renderStatus(); }, 8000);
+  }
+
+  function load(manual) {
+    if (state.loading) return;
+    state.loading = true;
+    setNote("");
+    renderStatus();
+    fetch("data.json?t=" + Date.now(), { cache: "no-store" })
+      .then(function (r) {
+        if (!r.ok) throw new Error("Request failed (" + r.status + ")");
+        return r.json();
+      })
+      .then(function (j) {
+        if (!j || !j.feed) throw new Error("Unexpected data format");
+        var f = Date.parse(j.fetchedAt);
+        f = isNaN(f) ? null : f;
+        var unchanged = manual === true && state.fetchedAt !== null && f === state.fetchedAt;
+        state.coasters = buildBoard(j.feed);
+        state.fetchedAt = f;
+        state.checkedAt = Date.now();
+        state.error = null;
+        if (unchanged) setNote("No newer data yet.");
+        renderRows();
+      })
+      .catch(function (e) {
+        state.error = e.message || "Network error";
+        if (!state.coasters) el.headline.textContent = "Queue times unavailable";
+      })
+      .then(function () {
+        state.loading = false;
+        renderStatus();
+      });
+  }
+
+  var buttons = document.querySelectorAll(".seg button");
+  function syncButtons() {
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].setAttribute("aria-pressed", buttons[i].getAttribute("data-sort") === state.sort ? "true" : "false");
+    }
+  }
+  for (var i = 0; i < buttons.length; i++) {
+    buttons[i].addEventListener("click", function (e) {
+      state.sort = e.currentTarget.getAttribute("data-sort");
+      try { localStorage.setItem("sort", state.sort); } catch (err) {}
+      syncButtons();
+      renderRows();
+    });
+  }
+  el.refresh.addEventListener("click", function () { load(true); });
+
+  // No network calls here: just keep the "x min ago" labels current.
+  function refreshLabels() { updateAges(); renderStatus(); }
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) refreshLabels(); });
+  setInterval(refreshLabels, 15000);
+
+  syncButtons();
+  load(false);
+})();
+</script>
+</body>
+</html>
